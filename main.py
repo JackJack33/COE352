@@ -121,7 +121,6 @@ def SMS(masses: list, spring_constants: list, eps: float=1e-10, g: float=-9.81) 
 
 def main():
 
-    """
     n_masses = int(input("Enter the number of masses (>=1): "))
     if (n_masses < 1):
         print("Invalid number of masses")
@@ -141,7 +140,6 @@ def main():
         spring_constants[i] = float(input(f"Enter spring constant {i+1}/{n_springs}: "))
 
     SMS(masses, spring_constants)
-    """
 
     return
 
