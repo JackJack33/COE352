@@ -17,8 +17,10 @@ def SVD(A: np.ndarray, eps: float=1e-10) -> [[np.ndarray, np.ndarray, np.ndarray
     i = np.argsort(-eigenvalues)
     eigenvalues = eigenvalues[i].real
     eigenvectors = eigenvectors[:, i].real
+    logging.info(f'Eigenvalues:\n{eigenvalues}')
 
     singular_values = np.sqrt(eigenvalues[abs(eigenvalues) > eps]).real
+    logging.info(f'Singular Values:\n{singular_values}')
 
     S = np.zeros((A.shape[0], A.shape[1]), dtype=float)
     for i in range(len(singular_values)):
@@ -46,7 +48,7 @@ def SVD(A: np.ndarray, eps: float=1e-10) -> [[np.ndarray, np.ndarray, np.ndarray
     # (4) Calculate condition number:
 
     k = max(singular_values) / min(singular_values)
-    logging.info(f'k:\n{k}')
+    logging.info(f'k:\n{k:.2f}')
 
     # (5) Calculate inverse of A:
 
@@ -61,7 +63,7 @@ def SVD(A: np.ndarray, eps: float=1e-10) -> [[np.ndarray, np.ndarray, np.ndarray
 
     return [U,S,V.T], k, A_inv
 
-def SMS(masses: list, spring_constants: list, eps: float=1e-10, g: float=9.8) -> [list, list, list]:
+def SMS(masses: list, spring_constants: list, eps: float=1e-10, g: float=-9.81) -> [list, list, list]:
 
     logging.info(f'Running SMS...')
 
@@ -94,35 +96,44 @@ def SMS(masses: list, spring_constants: list, eps: float=1e-10, g: float=9.8) ->
     # (3) Construct K
     # K = A^TCA
     K = A.T @ C @ A
-    logging.info(f'f:\n{K}')
+    logging.info(f'K:\n{K}')
 
     # (4) Run SVD on K
+    logging.info('====================')
     USVT, k, K_inv = SVD(K)
+    logging.info('====================')
 
     # (5) Solve Ku=f
     # u = K^-1f
     # assuming gravity as external force
     f = [m * g for m in masses]
+    logging.info(f'Forces:\n{f}')
     u = K_inv @ f
-    logging.info(f'u:\n{u}')
+    logging.info(f'Displacements:\n{u}')
 
     # (6) Solve e=Au & w=Ce
     e = A @ u
     w = C @ e
-    logging.info(f'e:\n{e}')
-    logging.info(f'w:\n{w}')
+    logging.info(f'Elongations:\n{e}')
+    logging.info(f'Internal Stresses:\n{w}')
 
     return u,e,w
 
 def main():
 
-    n_masses = int(input("Enter the number of masses: "))
+    """
+    n_masses = int(input("Enter the number of masses (>=1): "))
+    if (n_masses < 1):
+        print("Invalid number of masses")
+        exit()
     masses = [0] * n_masses
     for i in range(n_masses):
         masses[i] = float(input(f"Enter mass {i+1}/{n_masses}: "))
 
-    # -1 also works as FREE/FREE, but is nonsensical so it is not included here
     boundary_condition = int(input("Select the boundary condition (0 for FIXED/FREE, 1 for FIXED,FIXED): "))
+    if (boundary_condition != 0 and boundary_condition != 1):
+        print("Invalid boundary condition")
+        exit()
 
     n_springs = n_masses+boundary_condition
     spring_constants = [0] * n_springs
@@ -130,10 +141,11 @@ def main():
         spring_constants[i] = float(input(f"Enter spring constant {i+1}/{n_springs}: "))
 
     SMS(masses, spring_constants)
+    """
 
     return
 
 if __name__ == '__main__':
-    np.set_printoptions(precision=2, suppress=True)
-    logging.basicConfig(level=logging.INFO)
+    np.set_printoptions(precision=3, suppress=True)
+    logging.basicConfig(level=logging.WARNING)
     main()
