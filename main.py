@@ -145,5 +145,5 @@ def main():
 
 if __name__ == '__main__':
     np.set_printoptions(precision=3, suppress=True)
-    logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(level=logging.INFO)
     main()
