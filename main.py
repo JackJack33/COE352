@@ -53,25 +53,27 @@ def SVD(A: np.ndarray, eps: float=1e-10) -> [[np.ndarray, np.ndarray, np.ndarray
     A_inv = np.zeros_like(A, dtype=float)
     if (A_inv.shape[0] != A_inv.shape[1]):
         logging.error(f'Matrix A is non-square (not invertible)')
-    elif np.any(eigenvalues < eps):
+    elif np.any(abs(eigenvalues) < eps):
         logging.error(f'Matrix A has singular value close to 0 (not invertible)')
     else:
         A_inv = V @ S_inv @ U.T
         logging.info(f'A_inv:\n{A_inv}')
 
-    logging.info(f'A=USV^T:\n{U}\n{S}\n{V.T}')
-    logging.info(f'A:\n{U@S@V.T}')
-
     return [U,S,V.T], k, A_inv
 
-def SMS(masses: list, spring_constants: list, eps: float=1e-10) -> [list, list, list]:
+def SMS(masses: list, spring_constants: list, eps: float=1e-10, g: float=9.8) -> [list, list, list]:
 
-    # FREE/FREE if n_springs = n_masses - 1
+    logging.info(f'Running SMS...')
+
+    # FREE/FREE if n_springs = n_masses - 1 !!! NOT INVERTIBLE !!!
     # FREE/FIXED if n_springs = n_masses
     # FIXED/FIXED if n_springs = n_masses + 1
 
     n_masses = len(masses)
     n_springs = len(spring_constants)
+
+    if n_masses > n_springs:
+        logging.error(f'System is rank deficient (n_masses > n_springs); K matrix will not be invertible. Proceeding anyway.')
 
     # (1) Construct A
     # e(n_springs*1) = A(n_springs*n_masses)u(n_masses*1)
@@ -80,20 +82,19 @@ def SMS(masses: list, spring_constants: list, eps: float=1e-10) -> [list, list, 
         A[i,i] = 1
     for i in range(1,n_springs):
         A[i,i-1] = -1
-    logging.info(f'\n{A}')
+    logging.info(f'A:\n{A}')
 
     # (2) Construct C
     # C = diagonal matrix of 1/k_i
     C = np.zeros((n_springs, n_springs))
     for i in range(n_springs):
         C[i,i] = 1 / spring_constants[i]
-
-    logging.info(f'\n{C}')
+    logging.info(f'C:\n{C}')
 
     # (3) Construct K
     # K = A^TCA
     K = A.T @ C @ A
-    logging.info(f'\n{K}')
+    logging.info(f'f:\n{K}')
 
     # (4) Run SVD on K
     USVT, k, K_inv = SVD(K)
@@ -101,41 +102,34 @@ def SMS(masses: list, spring_constants: list, eps: float=1e-10) -> [list, list, 
     # (5) Solve Ku=f
     # u = K^-1f
     # assuming gravity as external force
-    f = [m * 9.8 for m in masses]
+    f = [m * g for m in masses]
     u = K_inv @ f
-    logging.info(f'\n{u}')
+    logging.info(f'u:\n{u}')
 
     # (6) Solve e=Au & w=Ce
     e = A @ u
     w = C @ e
-    logging.info(f'\n{e}\n{u}')
+    logging.info(f'e:\n{e}')
+    logging.info(f'w:\n{w}')
 
     return u,e,w
 
 def main():
 
-    matrices = [
-        #np.array([[3, 2, 2], [2, 3, -2]]),
-        np.array([[-3, 1], [6, -2], [6, -2]])
-        #np.array([[1, 2, 3], [0, 1, 4], [5, 6, 0]]),
-        #np.array([[1, 2, 3], [1, 2, 3], [1, 2, 3]]),
-        #np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
-        #np.array([[4, 0, 0], [0, 3, 0], [0, 0, 2]]),
-        #np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
-        #np.array([[4, 1, 2], [1, 3, 0], [2, 0, 5]]),
-        #np.array([[2, -1, 3], [0, 5, -2], [4, 2, 1]])
-    ]
+    n_masses = int(input("Enter the number of masses: "))
+    masses = [0] * n_masses
+    for i in range(n_masses):
+        masses[i] = float(input(f"Enter mass {i+1}/{n_masses}: "))
 
-    for i, A in enumerate(matrices):
-        USVT, k, A_inv = SVD(A)
-        try:
-            logging.warning(f'\n{i}:\n{A}\n{USVT[0] @ USVT[1] @ USVT[2]}')
-        except:
-            continue
+    # -1 also works as FREE/FREE, but is nonsensical so it is not included here
+    boundary_condition = int(input("Select the boundary condition (0 for FIXED/FREE, 1 for FIXED,FIXED): "))
 
-    #m = [1,2,3]
-    #s = [4,5,6,7]
-    #SMS(m,s)
+    n_springs = n_masses+boundary_condition
+    spring_constants = [0] * n_springs
+    for i in range(n_springs):
+        spring_constants[i] = float(input(f"Enter spring constant {i+1}/{n_springs}: "))
+
+    SMS(masses, spring_constants)
 
     return
 
